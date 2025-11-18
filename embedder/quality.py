@@ -15,7 +15,7 @@ QUERY = "craft beer"
 
 def main():
     input_path = os.getenv("FS_CATEGORIES_RAW_DATA")
-    output_path = os.getenv("FS_CATEGORIES_EMBEDDINGS_OUT", "category_embeddings.json")
+    output_path = os.getenv("FS_CATEGORIES_EMBEDDINGS_OUT")
     model_name = os.getenv("EMBEDDER_MODEL", "intfloat/multilingual-e5-large")
 
     if not input_path:
