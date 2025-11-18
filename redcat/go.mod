@@ -1,6 +1,8 @@
 module redcat
 
-go 1.24
+go 1.23.0
+
+toolchain go1.24.10
 
 require github.com/redis/rueidis v1.0.68
 

@@ -59,7 +59,7 @@ services:
       context: .
       dockerfile: build/redcat.Dockerfile
     ports:
-      - "8082:8000"
+      - "8082:8080"
     networks:
       - redcat-net
     restart: unless-stopped
