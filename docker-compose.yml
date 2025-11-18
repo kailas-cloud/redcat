@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:8
+    container_name: redis-geo
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--save"
+      - "60"
+      - "1000"
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./.redis:/data
+    networks:
+      - redcat-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 3s
+      timeout: 2s
+      retries: 5
+      start_period: 3s
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: redis-insight
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "5540:5540"
+    networks:
+      - redcat-net
+    restart: unless-stopped
+
+networks:
+  redcat-net:
+    driver: bridge
