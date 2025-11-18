@@ -37,6 +37,21 @@ services:
       - redcat-net
     restart: unless-stopped
 
+  embedder:
+    build:
+      context: .
+      dockerfile: build/embedder.Dockerfile
+      args:
+        MODEL_DIR: models/e5-multilingual-large/onnx
+        MODEL_FILE: model_qint8_avx512_vnni.onnx
+    environment:
+      EMBEDDER_MODEL_PATH: /app/models/model.onnx
+      EMBEDDER_TOKENIZER_PATH: /app/models
+      EMBEDDER_MAX_LEN: "128"
+    ports:
+      - "8081:8000"
+    restart: unless-stopped
+
 networks:
   redcat-net:
     driver: bridge
