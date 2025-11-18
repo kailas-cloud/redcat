@@ -50,6 +50,18 @@ services:
       EMBEDDER_MAX_LEN: "128"
     ports:
       - "8081:8000"
+    networks:
+      - redcat-net
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: build/redcat.Dockerfile
+    ports:
+      - "8082:8000"
+    networks:
+      - redcat-net
     restart: unless-stopped
 
 networks:
