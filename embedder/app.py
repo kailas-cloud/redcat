@@ -1,9 +1,11 @@
 import math
 import os
 
+import numpy as np
 import onnxruntime as ort
 from transformers import AutoTokenizer
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 
@@ -22,7 +24,6 @@ class Embedder:
         max_length = int(os.getenv("EMBEDDER_MAX_LEN", "128"))
 
         self.max_length = max_length
-
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
         self.session = ort.InferenceSession(
@@ -30,7 +31,6 @@ class Embedder:
             providers=["CPUExecutionProvider"]
         )
 
-        # имена входов/выходов
         inputs = self.session.get_inputs()
         outputs = self.session.get_outputs()
 
@@ -62,16 +62,47 @@ class Embedder:
             },
         )
 
-        vec = outputs[0][0]  # numpy array
+        emb = outputs[0]  # np.ndarray
 
-        # Convert to native Python list - handles numpy types properly
+        # Ожидаемые варианты:
+        # (1, seq_len, dim) -> токеновые эмбеддинги
+        # (1, dim)          -> уже pooled эмбеддинг
+        # (dim,)            -> совсем простой случай
+        emb = np.array(emb)
+
+        if emb.ndim == 3:
+            # (batch, seq_len, dim)
+            token_embs = emb[0]                 # (seq_len, dim)
+            mask = tokens["attention_mask"][0]  # (seq_len,)
+            mask = mask.astype(np.float32)
+
+            # избегаем деления на 0
+            if mask.sum() == 0:
+                pooled = token_embs.mean(axis=0)
+            else:
+                mask = mask[:, None]            # (seq_len, 1)
+                pooled = (token_embs * mask).sum(axis=0) / mask.sum()
+
+            vec = pooled
+        elif emb.ndim == 2:
+            # (batch, dim)
+            vec = emb[0]
+        elif emb.ndim == 1:
+            vec = emb
+        else:
+            raise RuntimeError(f"Неожиданная форма выхода ONNX: {emb.shape}")
+
         vec_list = vec.tolist()
 
-        # Clean non-finite values
-        cleaned = [0.0 if not math.isfinite(x) else x for x in vec_list]
+        # защитимся от NaN/inf
+        cleaned = []
+        for x in vec_list:
+            # тут x уже должен быть числом
+            if not isinstance(x, (int, float)):
+                raise TypeError(f"Элемент эмбеддинга не число, а {type(x)}: {x}")
+            cleaned.append(0.0 if not math.isfinite(x) else float(x))
 
         return cleaned
-
 
 
 embedder = Embedder()
@@ -95,4 +126,7 @@ def embed(req: EmbedRequest):
         return {"vector": [], "dim": 0}
 
     vec = embedder.embed(text)
-    return {"vector": vec, "dim": len(vec)}
+    return JSONResponse({
+        "vector": vec,
+        "dim": len(vec)
+    })

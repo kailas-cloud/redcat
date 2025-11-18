@@ -2,16 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-ARG MODEL_DIR="models/e5-multilingual-large/onnx"
-ARG MODEL_FILE="model_qint8_avx512_vnni.onnx"
-
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
-COPY embedder ./embedder
-
-RUN pip install --no-cache-dir -r ./embedder/requirements.txt
-
+ARG MODEL_DIR="models/e5-multilingual-large/onnx"
+ARG MODEL_FILE="model_qint8_avx512_vnni.onnx"
 
 RUN mkdir -p /app/models
 
@@ -23,7 +19,11 @@ COPY ${MODEL_DIR}/tokenizer.json \
      ${MODEL_DIR}/special_tokens_map.json \
      /app/models/
 
-ENV PYTHONPATH=/app
+COPY embedder/requirements.txt ./embedder/requirements.txt
+RUN pip install --no-cache-dir -r ./embedder/requirements.txt
+
+COPY embedder ./embedder
+
 
 EXPOSE 8000
 
