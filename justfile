@@ -26,3 +26,12 @@ insight:
 clean:
     docker compose down -v
     rm -rf .redis
+
+env:
+    source .env
+
+embedder:
+    .venv/bin/python embedder/embedder.py
+
+quality:
+    .venv/bin/python embedder/quality.py

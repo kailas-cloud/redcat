@@ -2,4 +2,5 @@
 .idea
 .redis
 .data
-data
+.venv
+models
