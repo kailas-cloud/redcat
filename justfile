@@ -38,3 +38,4 @@ quality:
 
 migrate:
     .venv/bin/python migrations/categories.py
+    .venv/bin/python migrations/places.py
