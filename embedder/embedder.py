@@ -57,10 +57,7 @@ def load_model(model_name: str) -> TextEmbedding:
 
 def compute_embeddings(embedder: TextEmbedding, labels: list) -> list:
     print("Computing embeddings…")
-
-    # e5-модели обучены в формате query/passsage, без этого качество проседает
-    inputs = [f"passage: {label}" for label in labels]
-
+    inputs = [f"passage: place category: {label}" for label in labels]
     vectors = list(embedder.embed(inputs))
     print(f"Got {len(vectors)} embeddings")
     return vectors
