@@ -35,3 +35,6 @@ embedder:
 
 quality:
     .venv/bin/python embedder/quality.py
+
+migrate:
+    .venv/bin/python migrations/categories.py
