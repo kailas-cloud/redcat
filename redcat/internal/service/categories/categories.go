@@ -15,19 +15,19 @@ type categoryStorage interface {
 	LooksAlike(ctx context.Context, vec []float32, k int64) ([]model.Category, error)
 }
 
-type CategoryService struct {
+type Service struct {
 	embedder embedder
 	store    categoryStorage
 }
 
-func NewCategoryService(e embedder, s categoryStorage) *CategoryService {
-	return &CategoryService{
+func NewCategoryService(e embedder, s categoryStorage) *Service {
+	return &Service{
 		embedder: e,
 		store:    s,
 	}
 }
 
-func (s *CategoryService) Search(ctx context.Context, query string, limit int64) ([]model.Category, error) {
+func (s *Service) Search(ctx context.Context, query string, limit int64) ([]model.Category, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return nil, errors.New("empty query")

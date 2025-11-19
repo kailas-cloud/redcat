@@ -6,24 +6,25 @@ import (
 	"encoding/json"
 	"log"
 	"math"
-	"redcat/internal/model"
 
 	"github.com/redis/rueidis"
+
+	"redcat/internal/model"
 )
 
 const categoriesIndexKey = "categories:index"
 
-type CategoryStorage struct {
+type Storage struct {
 	client rueidis.Client
 }
 
-func New(c rueidis.Client) *CategoryStorage {
-	return &CategoryStorage{
+func New(c rueidis.Client) *Storage {
+	return &Storage{
 		client: c,
 	}
 }
 
-func (s *CategoryStorage) LooksAlike(ctx context.Context, vec []float32, k int64) ([]model.Category, error) {
+func (s *Storage) LooksAlike(ctx context.Context, vec []float32, k int64) ([]model.Category, error) {
 	blob := encodeFP32LE(vec)
 	cmd := s.client.B().Vsim().Key(categoriesIndexKey).
 		Fp32().

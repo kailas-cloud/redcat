@@ -8,10 +8,10 @@ import (
 )
 
 type Server struct {
-	svc *categories.CategoryService
+	svc *categories.Service
 }
 
-func NewServer(svc *categories.CategoryService) *Server {
+func NewServer(svc *categories.Service) *Server {
 	return &Server{svc: svc}
 }
 
