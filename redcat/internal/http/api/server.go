@@ -19,6 +19,6 @@ func New(cat *categories.Service, ps *places.Service) *Server {
 }
 
 func (s *Server) Routes(mux *http.ServeMux) {
-	mux.HandleFunc("/categories", s.postPlaces)
-	mux.HandleFunc("/places", s.getCategories)
+	mux.HandleFunc("/categories", s.Categories)
+	mux.HandleFunc("/places", s.Places)
 }

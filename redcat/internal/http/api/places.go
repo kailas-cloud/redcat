@@ -6,14 +6,12 @@ import (
 	"redcat/internal/model"
 )
 
-func (s *Server) postPlaces(w http.ResponseWriter, r *http.Request) {
+func (s *Server) Places(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	ctx := r.Context()
 
 	var p model.Place
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
@@ -26,7 +24,7 @@ func (s *Server) postPlaces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.placeSvc.Add(ctx, p); err != nil {
+	if err := s.placeSvc.Add(r.Context(), p); err != nil {
 		http.Error(w, "failed to save place", http.StatusInternalServerError)
 		return
 	}

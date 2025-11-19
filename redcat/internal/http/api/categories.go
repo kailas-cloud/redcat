@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func (s *Server) getCategories(w http.ResponseWriter, r *http.Request) {
+func (s *Server) Categories(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	query := r.URL.Query().Get("query")
 	limitStr := r.URL.Query().Get("limit")
