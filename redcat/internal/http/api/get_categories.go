@@ -3,23 +3,10 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"redcat/internal/service/categories"
 	"strconv"
 )
 
-type Server struct {
-	svc *categories.Service
-}
-
-func NewServer(svc *categories.Service) *Server {
-	return &Server{svc: svc}
-}
-
-func (s *Server) Routes(mux *http.ServeMux) {
-	mux.HandleFunc("/categories", s.handleCategories)
-}
-
-func (s *Server) handleCategories(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getCategories(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	query := r.URL.Query().Get("query")
 	limitStr := r.URL.Query().Get("limit")
@@ -31,7 +18,7 @@ func (s *Server) handleCategories(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	cats, err := s.svc.Search(ctx, query, limit)
+	cats, err := s.catSvc.Search(ctx, query, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -20,7 +20,7 @@ type Service struct {
 	store    categoryStorage
 }
 
-func NewCategoryService(e embedder, s categoryStorage) *Service {
+func New(e embedder, s categoryStorage) *Service {
 	return &Service{
 		embedder: e,
 		store:    s,

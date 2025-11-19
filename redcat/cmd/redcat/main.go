@@ -1,15 +1,16 @@
 package main
 
 import (
+	"github.com/redis/rueidis"
 	"log"
 	"net/http"
 	"os"
 	"redcat/internal/clients/embedder"
 	"redcat/internal/http/api"
 	"redcat/internal/service/categories"
-	repo "redcat/internal/storage/categories"
-
-	"github.com/redis/rueidis"
+	"redcat/internal/service/places"
+	catStore "redcat/internal/storage/categories"
+	plcStore "redcat/internal/storage/places"
 )
 
 func main() {
@@ -25,12 +26,11 @@ func main() {
 	}
 	defer client.Close()
 
-	emb := embedder.New(embedderURL)
-	store := repo.New(client)
-	svc := categories.NewCategoryService(emb, store)
-
 	mux := http.NewServeMux()
-	server := api.NewServer(svc)
+	server := api.New(
+		categories.New(embedder.New(embedderURL), catStore.New(client)),
+		places.New(plcStore.New(client)),
+	)
 	server.Routes(mux)
 
 	log.Printf("RedCat listening on %s", httpAddr)
