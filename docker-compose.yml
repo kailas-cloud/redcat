@@ -64,6 +64,29 @@ services:
       - redcat-net
     restart: unless-stopped
 
+  keplergl:
+    image: crazycapivara/kepler.gl:latest
+    container_name: keplergl
+    environment:
+      - MapboxAccessToken=${MAPBOX_TOKEN:-}
+    ports:
+      - "8080:80"
+    networks:
+      - redcat-net
+    restart: unless-stopped
+
+  data-server:
+    image: nginx:alpine
+    container_name: data
+    volumes:
+      - ./data:/usr/share/nginx/html:ro
+    ports:
+      - "8083:80"
+    networks:
+      - redcat-net
+    restart: unless-stopped
+
+
 networks:
   redcat-net:
     driver: bridge

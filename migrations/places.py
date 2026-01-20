@@ -27,10 +27,6 @@ def migrate_pois(path: str):
 
             place_id = row["fsq_place_id"].strip()
             key = f"place:{place_id}"
-
-            # DictReader уже даёт всё в dict[str, str]
-            # Можно без соплей просто писать в hset
-            # Redis сам переживёт, что всё строки.
             r.hset(key, mapping=row)
 
             if total % 2000 == 0:
@@ -39,5 +35,5 @@ def migrate_pois(path: str):
         logging.info(f"Done. Total {total} POIs migrated.")
 
 if __name__ == "__main__":
-    path = os.getenv("POIS_CSV", ".data/cyprus/pois_cy.csv")
+    path = os.getenv("POIS_CSV", ".data/cyprus/pois.csv")
     migrate_pois(path)

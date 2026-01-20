@@ -39,3 +39,10 @@ quality:
 migrate:
     .venv/bin/python migrations/categories.py
     .venv/bin/python migrations/places.py
+
+balancer:
+    .venv/bin/python balancer/label_hexagons.py
+    .venv/bin/python balancer/agg_hexagons.py
+
+kepler:
+    open http://localhost:8080 || xdg-open http://localhost:8080 || true
