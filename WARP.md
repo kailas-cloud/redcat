@@ -4,109 +4,137 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-RedCat is a geospatial POI (Points of Interest) search system that uses vector similarity search for category matching. It combines a Python embedding service with a Go API server, backed by Redis vector sets.
+RedCat is a geospatial POI (Points of Interest) search API using Valkey (Redis-compatible) with FT.SEARCH for vector-based nearest neighbor queries.
 
 ## Architecture
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Client    │────▶│  API (Go)   │────▶│    Redis    │
-└─────────────┘     └──────┬──────┘     │  (Vector)   │
-                          │            └─────────────┘
-                          ▼
-                   ┌─────────────┐
-                   │  Embedder   │
-                   │  (Python)   │
-                   └─────────────┘
+│   Client    │────▶│  API (Go)   │────▶│   Valkey    │
+│             │     │   Fiber     │     │  FT.SEARCH  │
+└─────────────┘     └─────────────┘     └─────────────┘
 ```
+
+**Production URL:** https://redcat.kailas.cloud/api/v1/
 
 ### Components
 
-**`archive/redcat/` - Go API Server**
-- Standard Go layout: `cmd/redcat/main.go` entry point
-- `internal/http/api/` - HTTP handlers for `/categories` and `/places`
-- `internal/service/` - Business logic for categories and places search
-- `internal/storage/` - Redis storage layer using rueidis client
-- `internal/clients/embedder/` - HTTP client for embedder service
-- Uses Redis VSIM command for vector similarity search
+**Go API Server (root)**
+- `cmd/redcat/main.go` - Entry point
+- `internal/api/` - HTTP handlers (Fiber) with structured JSON logging
+- `internal/service/places/` - Business logic for places CRUD and search
+- `internal/storage/valkey/` - Valkey storage layer using rueidis client
+- `internal/config/` - Environment configuration
+- `internal/domain/model/` - Domain models
 
-**`archive/embedder/` - Python Embedding Service**
-- `app.py` - FastAPI service serving `/embed` endpoint
-- Uses ONNX runtime with e5-multilingual-large model
-- `embedder.py` - Batch embedding script for category data
+**Deployment**
+- `Dockerfile` - Multi-stage Go build for linux/amd64
+- `k8s/` - Kubernetes manifests (namespace, deployment, service, ingress)
+- `.github/workflows/deploy.yml` - CI/CD: auto-tag → build → push GHCR → deploy k8s
 
-**`archive/migrations/` - Data Migration Scripts**
-- `categories.py` - Loads categories with embeddings into Redis vector set (VADD/VSETATTR)
-- `places.py` - Loads POI data into Redis hashes
-
-**`archive/balancer/` - Geospatial Utilities**
-- H3 hexagon labeling for POIs at resolutions 5-8
-- Aggregation scripts for density analysis
+**Legacy (archive/)**
+- Python embedder service, migrations, and balancer scripts (not used in current deployment)
 
 ## Commands
-
-All commands run from `archive/` directory using [just](https://github.com/casey/just):
-
-```bash
-# Docker operations
-just up          # Build and start all services
-just down        # Stop services
-just logs        # Follow container logs
-just clean       # Stop and remove volumes
-
-# Data operations (requires .venv)
-just migrate     # Run categories.py and places.py migrations
-just embedder    # Generate category embeddings
-just balancer    # Label and aggregate H3 hexagons
-
-# Utilities
-just redis       # Open redis-cli in container
-just insight     # Open RedisInsight UI (localhost:5540)
-just kepler      # Open Kepler.gl UI (localhost:8080)
-```
 
 ### Go Development
 
 ```bash
-cd archive/redcat
+# Build
 go build ./cmd/redcat
+
+# Run unit tests
 go test ./...
+
+# Run integration tests (hits live API)
+go test -tags=integration ./tests/integration/...
+
+# Run integration tests against custom URL
+REDCAT_API_URL=http://localhost:8080 go test -tags=integration ./tests/integration/...
 ```
 
-### Python Development
+### Docker
 
 ```bash
-cd archive
-python -m venv .venv
-source .venv/bin/activate
-pip install -r embedder/requirements.txt
-pip install redis pandas fastembed h3  # for migrations/balancer
+# Build image
+docker build --platform linux/amd64 -t redcat .
+
+# Run locally
+docker run -p 8080:8080 \
+  -e VALKEY_ADDRS=host.docker.internal:6379 \
+  redcat
+```
+
+### Kubernetes
+
+```bash
+# View logs
+kubectl logs -n redcat -l app=api -f
+
+# Restart deployment
+kubectl rollout restart deployment/api -n redcat
+
+# Check status
+kubectl get pods -n redcat
 ```
 
 ## Environment Variables
 
-Key variables (defined in `.env`):
-- `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`, `REDIS_PASSWORD` - Redis connection
-- `EMBEDDER_MODEL`, `EMBEDDER_MODEL_PATH`, `EMBEDDER_OUT` - Embedding model config
-- `FS_CATEGORIES_RAW_DATA` - Path to raw category parquet file
-- `POIS_CSV` - Path to POI CSV data
-- `MAPBOX_TOKEN` - For Kepler.gl visualization
+- `HTTP_ADDR` - Listen address (default `:8080`)
+- `VALKEY_ADDRS` - Comma-separated Valkey addresses (default `localhost:6379`)
+- `VALKEY_USER` - Valkey username (optional)
+- `VALKEY_PASS` - Valkey password (optional)
+- `VALKEY_INDEX` - FT.SEARCH index name (default `index_places`)
+- `VALKEY_PREFIX` - Key prefix for places (default `places:`)
 
-## Service Ports
+## API Endpoints
 
-- `6379` - Redis
-- `5540` - RedisInsight
-- `8080` - Kepler.gl
-- `8081` - Embedder API
-- `8082` - RedCat Go API
-- `8083` - Static data server (nginx)
+- `GET /healthz` - Health check (internal only, not exposed via ingress)
+- `POST /api/v1/places` - Create place
+- `GET /api/v1/places/:id` - Get place by ID
+- `DELETE /api/v1/places/:id` - Delete place
+- `POST /api/v1/places/search` - Search nearby places
 
-## Data Flow
+### Search Request Example
 
-1. Category embeddings generated via `embedder.py` → JSON file
-2. `migrations/categories.py` loads embeddings into Redis vector set
-3. POI data loaded via `migrations/places.py` into Redis hashes
-4. API queries: text → embedder service → vector → Redis VSIM → results
+```json
+{
+  "location": {"lat": 55.7558, "lon": 37.6173},
+  "category_ids": ["13000"],
+  "limit": 10
+}
+```
+
+## Logging
+
+API uses structured JSON logging via `log/slog`:
+- Request logging middleware (method, path, status, latency, IP)
+- Operation logging (search params, results count, errors)
+
+View logs: `kubectl logs -n redcat -l app=api -f`
+
+## Testing
+
+**Unit tests:** `go test ./...`
+
+**Integration tests:** `go test -tags=integration ./tests/integration/...`
+
+Integration tests hit the live API at https://redcat.kailas.cloud/api/v1/ and test:
+- Health check
+- Place CRUD (create, get, delete)
+- Search (nearby, with category filter)
+- Validation (missing fields, invalid JSON)
+
+Set `REDCAT_API_URL` to test against a different environment.
+
+## CI/CD
+
+On push to `main`:
+1. Compute next semver tag (v0.0.X)
+2. Build Docker image for linux/amd64
+3. Push to ghcr.io/kailas-cloud/redcat
+4. Create GitHub Release
+5. Deploy to Kubernetes via kustomize
 
 ---
 
