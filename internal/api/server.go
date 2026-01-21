@@ -23,6 +23,12 @@ func New() *Server {
 		DisableStartupMessage: false,
 	})
 
+	// Prometheus metrics endpoint (before other middlewares)
+	app.Get("/metrics", MetricsHandler())
+
+	// Prometheus metrics middleware
+	app.Use(MetricsMiddleware())
+
 	// Request logging middleware
 	app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
