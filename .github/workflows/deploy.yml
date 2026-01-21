@@ -1,0 +1,103 @@
+name: Release & deploy to kailas
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  KUSTOMIZE_DIR: k8s
+  KUSTOMIZE_IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next tag
+        id: bump
+        run: |
+          git fetch --tags
+
+          last_tag=$(git tag --list 'v*' | sort -V | tail -n1)
+
+          if [ -z "$last_tag" ]; then
+            next_tag="v0.0.1"
+          else
+            version=${last_tag#v}
+            IFS='.' read -r major minor patch <<< "$version"
+            patch=$((patch + 1))
+            next_tag="v${major}.${minor}.${patch}"
+          fi
+
+          echo "last_tag=$last_tag"
+          echo "next_tag=$next_tag"
+
+          echo "next_tag=$next_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          git tag "${{ steps.bump.outputs.next_tag }}"
+          git push origin "${{ steps.bump.outputs.next_tag }}"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.bump.outputs.next_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bump.outputs.next_tag }}
+          generate_release_notes: true
+
+      - name: Setup kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "5.4.2"
+
+      - name: Write kubeconfig
+        run: |
+          echo "${{ secrets.K8S_CONFIG_B64 }}" | base64 --decode > kubeconfig
+          chmod 600 kubeconfig
+          echo "KUBECONFIG=$PWD/kubeconfig" >> $GITHUB_ENV
+
+      - name: Set image tag in kustomize
+        working-directory: ${{ env.KUSTOMIZE_DIR }}
+        run: |
+          kustomize edit set image \
+            ${{ env.KUSTOMIZE_IMAGE_NAME }}=${{ env.KUSTOMIZE_IMAGE_NAME }}:${{ steps.bump.outputs.next_tag }}
+
+      - name: Apply manifests to cluster
+        run: |
+          kubectl config current-context
+          kubectl get nodes
+          kubectl apply -k ${{ env.KUSTOMIZE_DIR }}
+          kubectl rollout status deploy/api -n redcat
