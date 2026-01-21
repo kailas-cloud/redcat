@@ -13,7 +13,9 @@ type Client struct {
 }
 
 func NewClient(addrs []string, username, password string) (*Client, error) {
-	opt := rueidis.ClientOption{InitAddress: addrs}
+	opt := rueidis.ClientOption{
+		InitAddress: addrs,
+	}
 	if username != "" {
 		opt.Username = username
 	}
