@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -148,10 +149,10 @@ func (s *PlacesStorage) SearchNearest(ctx context.Context, sp SearchParams) ([]S
 	vec := geo.ToECEF(sp.Lat, sp.Lon)
 	query := knnQuery(sp.Limit, sp.CategoryIDs)
 
-	cmd := s.cli.B().FtSearch().
+cmd := s.cli.B().FtSearch().
 		Index(s.index).
 		Query(query).
-		Return("4").Identifier("id").Identifier("name").Identifier("lat").Identifier("lon").
+		Return("5").Identifier("id").Identifier("name").Identifier("lat").Identifier("lon").Identifier("category_ids").
 		Limit().OffsetNum(0, sp.Limit).
 		Params().Nargs(2).NameValue().NameValue("vec", rueidis.VectorString32(vec[:])).
 		Dialect(2).
@@ -166,10 +167,13 @@ func (s *PlacesStorage) SearchNearest(ctx context.Context, sp SearchParams) ([]S
 	for i := 1; i+1 < len(arr); i += 2 {
 		m, err := arr[i+1].AsStrMap(); if err != nil { continue }
 		var p model.Place
-		p.ID = m["id"]
+p.ID = m["id"]
 		p.Name = m["name"]
 		fmt.Sscanf(m["lat"], "%f", &p.Lat)
 		fmt.Sscanf(m["lon"], "%f", &p.Lon)
+		if cats := strings.TrimSpace(m["category_ids"]); cats != "" {
+			p.CategoryIDs = strings.Split(cats, ",")
+		}
 		d := haversineMeters(sp.Lat, sp.Lon, p.Lat, p.Lon)
 		res = append(res, SearchResult{Place: p, DistanceM: d})
 	}
