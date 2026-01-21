@@ -107,3 +107,28 @@ Key variables (defined in `.env`):
 2. `migrations/categories.py` loads embeddings into Redis vector set
 3. POI data loaded via `migrations/places.py` into Redis hashes
 4. API queries: text → embedder service → vector → Redis VSIM → results
+
+---
+
+## Valkey Search (current path, no-ML)
+
+- Index schema (idempotent via FT.INFO → FT.CREATE):
+  - `FT.CREATE index_places ON HASH PREFIX 1 places: SCHEMA`
+    - `category_ids TAG SEPARATOR ","`
+    - `location VECTOR FLAT TYPE FLOAT32 DIM 3 DISTANCE_METRIC L2`
+- Documents: `HSET places:{fsq_place_id}` with fields:
+  - `id,name,lat,lon,address,category_ids,location`
+  - `location` — 3×float32 (little-endian) вектор ECEF на единичной сфере из (lat, lon)
+- Query builder rules (RediSearch syntax is strict):
+  - AND — пробел между частями; OR — `|` в скобках
+  - Категории: `@category_ids:{id1|id2|...}` (значения разделены запятой в HASH)
+  - KNN секция: `=>[KNN {k} @location $vec]`
+  - Параметры: `PARAMS 2 vec <binary_3xfloat32_le>`; всегда `DIALECT 2`
+  - Возврат/лимиты: `RETURN 4 id name lat lon | LIMIT 0 {k}`
+- Go helpers (рекомендации):
+  - `CreateIndex(ctx)` — проверяет `FT.INFO`, затем `FT.CREATE`; игнорирует "Index already exists"
+  - `buildKnnQuery(k, categoryIDs)` — собирает фильтр категорий + `=>[KNN ...]`
+  - `SearchNearest` — строит `FT.SEARCH` через rueidis builder и `Dialect(2)`
+- Поведение поиска:
+  - Всегда top‑K ближайших по L2 над ECEF-векторами; радиус не используется.
+  - H3 не используется в этой реализации.

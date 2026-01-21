@@ -1,0 +1,466 @@
+openapi: 3.0.3
+info:
+  title: RedCat API
+  description: |
+    Geospatial POI (Points of Interest) search API.
+    Provides fast search for nearby places by category using Valkey geospatial indexes.
+  version: 1.0.0
+  contact:
+    name: RedCat
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+
+tags:
+  - name: categories
+    description: POI categories (Foursquare taxonomy)
+  - name: places
+    description: Places/Venues CRUD and search
+
+paths:
+  /categories:
+    get:
+      tags: [categories]
+      operationId: listCategories
+      summary: List all categories
+      description: Returns the full category taxonomy (~1200 items). Small payload, cacheable.
+      responses:
+        '200':
+          description: Category list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+                  total:
+                    type: integer
+                    example: 1245
+
+  /places/search:
+    post:
+      tags: [places]
+      operationId: searchPlaces
+      summary: Search nearest places
+      description: |
+        Find top K places nearest to a location, filtered by category IDs.
+        Returns results sorted by distance (closest first).
+        Implementation: Valkey Search KNN on 3D ECEF unit-sphere vectors (VECTOR L2), no radius parameter.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /places:
+    post:
+      tags: [places]
+      operationId: createPlace
+      summary: Create a new place
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceCreate'
+      responses:
+        '201':
+          description: Place created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Place'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Place with this ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /places/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Place ID (fsq_place_id)
+        schema:
+          type: string
+        example: "50dd9229e4b095c36d11f194"
+
+    get:
+      tags: [places]
+      operationId: getPlace
+      summary: Get place by ID
+      responses:
+        '200':
+          description: Place found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Place'
+        '404':
+          description: Place not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [places]
+      operationId: updatePlace
+      summary: Update a place
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceUpdate'
+      responses:
+        '200':
+          description: Place updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Place'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Place not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [places]
+      operationId: deletePlace
+      summary: Delete a place
+      responses:
+        '204':
+          description: Place deleted
+        '404':
+          description: Place not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Category:
+      type: object
+      required: [id, name, label, level]
+      properties:
+        id:
+          type: string
+          description: Foursquare category ID
+          example: "4bf58dd8d48988d1ba941735"
+        name:
+          type: string
+          description: Category short name
+          example: "Coffee Shop"
+        label:
+          type: string
+          description: Full category path
+          example: "Dining and Drinking > Cafe, Coffee, and Tea House > Coffee Shop"
+        level:
+          type: integer
+          minimum: 1
+          maximum: 6
+          description: Depth in category hierarchy
+          example: 3
+
+    Location:
+      type: object
+      required: [lat, lon]
+      properties:
+        lat:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          description: Latitude
+          example: 35.1753
+        lon:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          description: Longitude
+          example: 33.3642
+
+    SearchRequest:
+      type: object
+      required: [location, category_ids]
+      properties:
+        location:
+          $ref: '#/components/schemas/Location'
+        category_ids:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 50
+          description: Filter by category IDs
+          example: ["4bf58dd8d48988d1e0931735", "4bf58dd8d48988d16d941735"]
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 100
+          description: Number of nearest places to return
+          example: 100
+
+    SearchResponse:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlaceWithDistance'
+        total:
+          type: integer
+          description: Number of results returned
+          example: 50
+        query:
+          type: object
+          description: Echo of the search parameters
+          properties:
+            location:
+              $ref: '#/components/schemas/Location'
+            limit:
+              type: integer
+
+    PlaceWithDistance:
+      allOf:
+        - $ref: '#/components/schemas/Place'
+        - type: object
+          properties:
+            distance_m:
+              type: number
+              format: double
+              description: Distance from query point in meters
+              example: 342.5
+
+    Place:
+      type: object
+      required: [id, name, location, category_ids]
+      properties:
+        id:
+          type: string
+          description: Place ID (fsq_place_id)
+          example: "50dd9229e4b095c36d11f194"
+        name:
+          type: string
+          description: Place name
+          example: "Starbucks"
+        location:
+          $ref: '#/components/schemas/Location'
+        address:
+          $ref: '#/components/schemas/Address'
+        locality:
+          type: string
+        region:
+          type: string
+        postcode:
+          type: string
+        admin_region:
+          type: string
+        post_town:
+          type: string
+        po_box:
+          type: string
+        country:
+          type: string
+        category_ids:
+          type: array
+          items:
+            type: string
+          description: List of category IDs this place belongs to
+          example: ["4bf58dd8d48988d1e0931735"]
+        category_labels:
+          type: array
+          items:
+            type: string
+        contact:
+          $ref: '#/components/schemas/Contact'
+        dates:
+          $ref: '#/components/schemas/PlaceDates'
+        social:
+          $ref: '#/components/schemas/Social'
+        placemaker_url:
+          type: string
+          format: uri
+        bbox:
+          type: object
+          properties:
+            xmin: { type: number }
+            ymin: { type: number }
+            xmax: { type: number }
+            ymax: { type: number }
+        dt:
+          type: string
+          format: date
+
+    PlaceCreate:
+      type: object
+      required: [name, location, category_ids]
+      properties:
+        id:
+          type: string
+          description: Optional custom ID. Generated if not provided.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 500
+        location:
+          $ref: '#/components/schemas/Location'
+        address:
+          $ref: '#/components/schemas/Address'
+        category_ids:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 20
+        contact:
+          $ref: '#/components/schemas/Contact'
+        social:
+          $ref: '#/components/schemas/Social'
+
+    PlaceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 500
+        location:
+          $ref: '#/components/schemas/Location'
+        address:
+          $ref: '#/components/schemas/Address'
+        category_ids:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 20
+        contact:
+          $ref: '#/components/schemas/Contact'
+        social:
+          $ref: '#/components/schemas/Social'
+
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+          example: "123 Main Street"
+        locality:
+          type: string
+          description: City/Town
+          example: "Nicosia"
+        region:
+          type: string
+          description: State/Province
+          example: "Nicosia District"
+        postcode:
+          type: string
+          example: "1000"
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code
+          example: "CY"
+
+    Contact:
+      type: object
+      properties:
+        phone:
+          type: string
+          example: "+357 22 123456"
+        website:
+          type: string
+          format: uri
+          example: "https://example.com"
+        email:
+          type: string
+          format: email
+          example: "info@example.com"
+        facebook_id:
+          type: string
+        instagram:
+          type: string
+        twitter:
+          type: string
+
+    Social:
+      type: object
+      properties:
+        facebook_id:
+          type: string
+        instagram:
+          type: string
+        twitter:
+          type: string
+
+    PlaceDates:
+      type: object
+      properties:
+        created:
+          type: string
+          format: date
+          example: "2024-01-15"
+        refreshed:
+          type: string
+          format: date
+          example: "2024-06-20"
+        closed:
+          type: string
+          format: date
+          nullable: true
+          description: Date when place was marked as closed
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: "INVALID_REQUEST"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid category_ids: unknown category"
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context
