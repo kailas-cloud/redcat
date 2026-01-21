@@ -11,6 +11,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /redcat .
 
 FROM alpine:3.21
 
+LABEL org.opencontainers.image.source="https://github.com/kailas-cloud/redcat"
+
 RUN apk add --no-cache ca-certificates
 
 COPY --from=builder /redcat /redcat
