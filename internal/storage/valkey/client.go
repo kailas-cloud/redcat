@@ -15,6 +15,13 @@ type Client struct {
 func NewClient(addrs []string, username, password string) (*Client, error) {
 	opt := rueidis.ClientOption{
 		InitAddress: addrs,
+		// Connection pooling for high throughput
+		BlockingPoolSize: 0, // Use pipeline mode (multiplexing) by default
+		PipelineMultiplex: 128, // Max concurrent pipeline requests per connection
+		// Ring buffer for batching commands
+		RingScaleEachConn: 10, // 2^10 = 1024 ring buffer size
+		// Disable client-side caching for write-heavy workload
+		DisableCache: true,
 	}
 	if username != "" {
 		opt.Username = username

@@ -81,6 +81,7 @@ var (
 	workers     = flag.Int("workers", 10, "concurrent HTTP workers")
 	limit       = flag.Int("limit", 0, "max records to load (0 = all)")
 	dryRun      = flag.Bool("dry-run", false, "don't send to API")
+	slim        = flag.Bool("slim", false, "only send id, name, lat, lon, category_ids, country")
 )
 
 func main() {
@@ -237,31 +238,44 @@ func sendPlace(ctx context.Context, client *http.Client, p ParquetPlace) error {
 		return nil
 	}
 
-	ap := APIPlace{
-		ID:             p.FsqPlaceID,
-		Name:           p.Name,
-		Lat:            p.Latitude,
-		Lon:            p.Longitude,
-		Address:        p.Address,
-		Locality:       p.Locality,
-		Region:         p.Region,
-		Postcode:       p.Postcode,
-		AdminRegion:    p.AdminRegion,
-		PostTown:       p.PostTown,
-		PoBox:          p.PoBox,
-		Country:        p.Country,
-		DateCreated:    p.DateCreated,
-		DateRefreshed:  p.DateRefreshed,
-		DateClosed:     p.DateClosed,
-		Tel:            p.Tel,
-		Website:        p.Website,
-		Email:          p.Email,
-		FacebookID:     fmtFacebookID(p.FacebookID),
-		Instagram:      p.Instagram,
-		Twitter:        p.Twitter,
-		CategoryIDs:    p.FsqCategoryIDs,
-		CategoryLabels: p.FsqCategoryLabels,
-		PlacemakerURL:  p.PlacemakerURL,
+	var ap APIPlace
+	if *slim {
+		// Minimal fields only: ~200-300 bytes/record
+		ap = APIPlace{
+			ID:          p.FsqPlaceID,
+			Name:        p.Name,
+			Lat:         p.Latitude,
+			Lon:         p.Longitude,
+			CategoryIDs: p.FsqCategoryIDs,
+			Country:     p.Country,
+		}
+	} else {
+		ap = APIPlace{
+			ID:             p.FsqPlaceID,
+			Name:           p.Name,
+			Lat:            p.Latitude,
+			Lon:            p.Longitude,
+			Address:        p.Address,
+			Locality:       p.Locality,
+			Region:         p.Region,
+			Postcode:       p.Postcode,
+			AdminRegion:    p.AdminRegion,
+			PostTown:       p.PostTown,
+			PoBox:          p.PoBox,
+			Country:        p.Country,
+			DateCreated:    p.DateCreated,
+			DateRefreshed:  p.DateRefreshed,
+			DateClosed:     p.DateClosed,
+			Tel:            p.Tel,
+			Website:        p.Website,
+			Email:          p.Email,
+			FacebookID:     fmtFacebookID(p.FacebookID),
+			Instagram:      p.Instagram,
+			Twitter:        p.Twitter,
+			CategoryIDs:    p.FsqCategoryIDs,
+			CategoryLabels: p.FsqCategoryLabels,
+			PlacemakerURL:  p.PlacemakerURL,
+		}
 	}
 
 	body, _ := json.Marshal(ap)

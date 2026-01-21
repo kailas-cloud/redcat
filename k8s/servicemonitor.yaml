@@ -5,6 +5,7 @@ metadata:
   namespace: redcat
   labels:
     app: api
+    release: kube-prometheus-stack
 spec:
   selector:
     matchLabels:
