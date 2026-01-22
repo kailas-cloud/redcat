@@ -4,5 +4,7 @@ resources:
   - service.yaml
   - ingress.yaml
   - servicemonitor.yaml
+  - grafana-dashboard.yaml
+  - grafana-dashboard-infra.yaml
 
 namespace: redcat
