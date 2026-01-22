@@ -24,6 +24,25 @@ Geospatial POI search API using Valkey (Redis-compatible) with FT.SEARCH for vec
 - [ ] Performance benchmarks under load
 - [ ] Pagination support
 - [ ] Geo-radius search (alternative to KNN)
+- [ ] Add `customConfig` support to valkey-operator CRD (see Valkey Config below)
+
+## Valkey Config
+
+Current persistence settings (applied manually via ConfigMap patch):
+```
+appendonly yes
+appendfsync everysec
+no-appendfsync-on-rewrite yes
+save ""
+```
+
+**Rationale:**
+- AOF enabled for durability (RDB disabled via `save ""`)
+- `everysec` balances durability vs performance (max 1s data loss)
+- `no-appendfsync-on-rewrite yes` prevents fsync blocking during BGREWRITEAOF
+
+⚠️ **Known issue:** Operator may overwrite ConfigMap on reconcile. 
+TODO: Add `customConfig` field to `valkeys.kailas.cloud` CRD.
 
 ## API Endpoints
 
