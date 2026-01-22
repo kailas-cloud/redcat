@@ -350,6 +350,165 @@ data:
           ],
           "title": "Network Errors & Drops",
           "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 73},
+          "id": 105,
+          "panels": [],
+          "title": "🧠 Valkey Internal Health",
+          "type": "row"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {"color": {"mode": "palette-classic"}, "mappings": [], "unit": "ops", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}},
+            "overrides": []
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 74},
+          "id": 50,
+          "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [{"expr": "sum(rate(redis_commands_total{namespace=\"valkey\"}[1m]))", "legendFormat": "", "refId": "A"}],
+          "title": "Commands/sec",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {"color": {"mode": "palette-classic"}, "mappings": [], "unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}},
+            "overrides": []
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 74},
+          "id": 51,
+          "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [{"expr": "sum(redis_connected_clients{namespace=\"valkey\"})", "legendFormat": "", "refId": "A"}],
+          "title": "Connected Clients",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {"color": {"mode": "palette-classic"}, "mappings": [], "unit": "decbytes", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 10000000000}, {"color": "red", "value": 14000000000}]}},
+            "overrides": []
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 74},
+          "id": 52,
+          "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [{"expr": "sum(redis_memory_used_bytes{namespace=\"valkey\"})", "legendFormat": "", "refId": "A"}],
+          "title": "Memory Used",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {"color": {"mode": "palette-classic"}, "mappings": [], "unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1.5}, {"color": "red", "value": 2}]}},
+            "overrides": []
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 74},
+          "id": 53,
+          "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [{"expr": "avg(redis_mem_fragmentation_ratio{namespace=\"valkey\"})", "legendFormat": "", "refId": "A"}],
+          "title": "Mem Fragmentation",
+          "description": "Ratio >1.5 indicates memory fragmentation",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "unit": "ops"},
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 78},
+          "id": 54,
+          "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+          "targets": [
+            {"expr": "sum(rate(redis_commands_total{namespace=\"valkey\"}[1m])) by (instance)", "legendFormat": "{{instance}}", "refId": "A"}
+          ],
+          "title": "Commands/sec by Instance",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "unit": "µs"},
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 78},
+          "id": 55,
+          "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+          "targets": [
+            {"expr": "histogram_quantile(0.50, sum(rate(redis_commands_latencies_usec_bucket{namespace=\"valkey\"}[5m])) by (le, cmd))", "legendFormat": "p50 {{cmd}}", "refId": "A"},
+            {"expr": "histogram_quantile(0.99, sum(rate(redis_commands_latencies_usec_bucket{namespace=\"valkey\"}[5m])) by (le, cmd))", "legendFormat": "p99 {{cmd}}", "refId": "B"}
+          ],
+          "title": "Command Latency p50/p99",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "unit": "bytes"},
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 86},
+          "id": 56,
+          "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+          "targets": [
+            {"expr": "redis_memory_used_bytes{namespace=\"valkey\"}", "legendFormat": "used {{instance}}", "refId": "A"},
+            {"expr": "redis_memory_used_rss_bytes{namespace=\"valkey\"}", "legendFormat": "rss {{instance}}", "refId": "B"}
+          ],
+          "title": "Memory: Used vs RSS",
+          "description": "RSS >> Used = fragmentation or allocator overhead",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "unit": "short"},
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 86},
+          "id": 57,
+          "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+          "targets": [
+            {"expr": "redis_mem_fragmentation_ratio{namespace=\"valkey\"}", "legendFormat": "{{instance}}", "refId": "A"}
+          ],
+          "title": "Memory Fragmentation Ratio",
+          "description": ">1.5 is concerning, >2 is problematic",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "unit": "s"},
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 94},
+          "id": 58,
+          "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+          "targets": [
+            {"expr": "rate(redis_cpu_user_seconds_total{namespace=\"valkey\"}[5m])", "legendFormat": "user {{instance}}", "refId": "A"},
+            {"expr": "rate(redis_cpu_sys_seconds_total{namespace=\"valkey\"}[5m])", "legendFormat": "sys {{instance}}", "refId": "B"}
+          ],
+          "title": "Valkey CPU (user/sys)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "unit": "short"},
+            "overrides": [{"matcher": {"id": "byRegexp", "options": ".*rewrite.*"}, "properties": [{"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}}]}]
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 94},
+          "id": 59,
+          "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+          "targets": [
+            {"expr": "redis_aof_rewrite_in_progress{namespace=\"valkey\"}", "legendFormat": "aof_rewrite {{instance}}", "refId": "A"},
+            {"expr": "redis_rdb_bgsave_in_progress{namespace=\"valkey\"}", "legendFormat": "rdb_bgsave {{instance}}", "refId": "B"},
+            {"expr": "redis_aof_delayed_fsync{namespace=\"valkey\"}", "legendFormat": "delayed_fsync {{instance}}", "refId": "C"}
+          ],
+          "title": "Persistence Activity",
+          "description": "AOF rewrite and RDB save activity",
+          "type": "timeseries"
         }
       ],
       "refresh": "30s",
